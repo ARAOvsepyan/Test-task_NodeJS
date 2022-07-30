@@ -1,0 +1,168 @@
+const jwt = require('jsonwebtoken')
+const ApiError = require('../error/ApiError')
+const { Tag, User_Tag, User } = require('../models/model')
+
+class TagsController {
+    async post(req, res, next) {
+        try {
+            const info = req.body
+    
+            const token = req.headers.authorization.split(' ')[1]
+            const decoded = jwt.verify(token, process.env.SECRET_KEY)
+    
+            const tag = await Tag.create({creator: decoded.uid, name: info.name, sortOrder: info.sortOrder})
+            await User_Tag.create({userUid: decoded.uid, tagId: tag.id})
+
+            return res.json({id: tag.id, name: tag.name, sortOrder: tag.sortOrder})
+        } catch (error) {
+            return next(ApiError.badRequest('This name is not unique'))
+        }
+    }
+
+    async get_by_id(req, res, next) {
+        try {
+            const {id} = req.params
+
+            const tag = await Tag.findOne({
+                attributes: ['name', 'sortOrder'],
+                include: [{
+                    model: User,
+                    attributes: ['nickname', 'uid'],
+                    through: {
+                        attributes: []
+                    },
+                }],
+                where: {id: id}
+            })
+
+            return res.json(tag)
+        } catch (error) {
+            return next(ApiError.badRequest('Can not find tag'))
+        }
+    }
+
+    async get(req, res) {
+        const token = req.headers.authorization.split(' ')[1]
+        const decoded = jwt.verify(token, process.env.SECRET_KEY)
+
+        const data = req.query
+
+        const page = data.page || 1
+        const pageSize = data.pageSize || 10
+        const offset = page * pageSize - pageSize
+
+        if('sortByOrder' in data)
+        {
+            const tags = await Tag.findAndCountAll({ 
+                attributes: ['name', 'sortOrder'],
+                    include: [{
+                        model: User,
+                        attributes: ['nickname', 'uid'],
+                        through: {
+                            attributes: []
+                        },
+                    }],
+                where: {creator: decoded.uid},
+                order: ['sortOrder'],
+                limit: pageSize,
+                offset: offset
+            })
+
+            return res.json({'data': tags.rows, 'meta': {page, pageSize, 'quantity': tags.count}})
+        }
+        
+        if('sortByName' in data)
+        {
+            const tags = await Tag.findAndCountAll({ 
+                attributes: ['name', 'sortOrder'],
+                    include: [{
+                        model: User,
+                        attributes: ['nickname', 'uid'],
+                        through: {
+                            attributes: []
+                        },
+                    }],
+                where: {creator: decoded.uid},
+                order: ['name'],
+                limit: pageSize,
+                offset: offset
+            })
+
+            return res.json({'data': tags.rows, 'meta': {page, pageSize, 'quantity': tags.count}})
+        }
+
+        if ('sortByOrder' in data && 'sortByName' in data) 
+        {
+            const tags = await Tag.findAndCountAll({ 
+                attributes: ['name', 'sortOrder'],
+                    include: [{
+                        model: User,
+                        attributes: ['nickname', 'uid'],
+                        through: {
+                            attributes: []
+                        },
+                    }],
+                where: {creator: decoded.uid},
+                order: ['name'],
+                order: ['sortOrder'],
+                limit: pageSize,
+                offset: offset
+            })
+
+            return res.json({'data': tags.rows, 'meta': {page, pageSize, 'quantity': tags.count}})
+        }
+
+        const tags = await Tag.findAndCountAll({ 
+            attributes: ['name', 'sortOrder'],
+                include: [{
+                    model: User,
+                    attributes: ['nickname', 'uid'],
+                    through: {
+                        attributes: []
+                    },
+                }],
+            where: {creator: decoded.uid},
+            limit: pageSize,
+            offset: offset
+        })
+
+        return res.json({'data': tags.rows, 'meta': {page, pageSize, 'quantity': tags.count}})
+    }
+
+    async put(req, res, next) {
+        try
+        {
+            const {id} = req.params
+            const data = req.body
+
+            await Tag.update({name: data.name, sortOrder: data.sortOrder},{where: {id}})
+
+            const updated_tag = await Tag.findOne({
+                attributes: ['name', 'sortOrder'],
+                include: [{
+                    model: User,
+                    attributes: ['nickname', 'uid'],
+                    through: {
+                        attributes: []
+                    },
+                }],
+                where: {id: id}
+            })
+
+            return res.json(updated_tag)
+        } catch(error) {
+            return next(ApiError.badRequest('This name is not unique'))
+        }
+    }
+
+    async delete(req, res, next) {
+        const {id} = req.params
+
+        await Tag.destroy({where: {id}})
+
+        return res.status(200).json()
+        
+    }
+}
+
+module.exports = new TagsController()
