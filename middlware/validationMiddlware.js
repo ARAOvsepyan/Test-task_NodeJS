@@ -16,11 +16,12 @@ const registrationSchema = {
     password: {
         isStrongPassword: {
             minLength: 8,
+            maxLength: 20,
             minLowercase: 1,
             minUppercase: 1,
             minNumbers: 1
         },
-        errorMessage: "Password must be greater than 8 and contain at least one uppercase letter, one lowercase letter, and one number",
+        errorMessage: "Пароль должен быть больше 8 символов и содержать как минимум одну заглавную букву, одну строчную букву и одну цифру.",
     },
     email: {
         normalizeEmail: true,
