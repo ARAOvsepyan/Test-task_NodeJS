@@ -25,8 +25,8 @@ class AuthController {
         const hashPassword = await bcrypt.hash(password, 5)
         const user = await User.create({email: email, password: hashPassword, nickname: nickname})
         const token = generateJWT(user.uid, user.email, user.nickname)
-
-        res.status(200).json({token, "expire": "1800"});
+    
+        res.status(200).json({token, 'expire': '1800'});
     }
 
     async login(req, res, next) {
@@ -43,7 +43,7 @@ class AuthController {
         }
 
         const token = generateJWT(user.uid, user.email, user.nickname)
-        return res.status(200).json({token,  "expire": "1800"})
+        return res.status(200).json({token,  'expire': '1800'})
     }
     
     async logout(req, res) {
