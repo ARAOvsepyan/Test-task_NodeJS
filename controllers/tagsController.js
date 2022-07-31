@@ -20,11 +20,11 @@ class TagsController {
     }
 
     async get_by_id(req, res, next) {
-        try {
+        // try {
             const {id} = req.params
 
             const tag = await Tag.findOne({
-                attributes: ['name', 'sortOrder'],
+                attributes: ['name', 'sortOrder', 'creator'],
                 include: [{
                     model: User,
                     attributes: ['nickname', 'uid'],
@@ -36,14 +36,14 @@ class TagsController {
             })
 
             return res.json(tag)
-        } catch (error) {
-            return next(ApiError.badRequest('Can not find tag'))
-        }
+        // } catch (error) {
+        //     return next(ApiError.badRequest('Can not find tag'))
+        // }
     }
 
     async get(req, res) {
         const token = req.headers.authorization.split(' ')[1]
-        const decoded = jwt.verify(token, process.env.SECRET_KEY)
+        // const decoded = jwt.verify(token, process.env.SECRET_KEY)
 
         const data = req.query
 
@@ -62,7 +62,7 @@ class TagsController {
                             attributes: []
                         },
                     }],
-                where: {creator: decoded.uid},
+                // where: {creator: decoded.uid},
                 order: ['sortOrder'],
                 limit: pageSize,
                 offset: offset
@@ -82,7 +82,7 @@ class TagsController {
                             attributes: []
                         },
                     }],
-                where: {creator: decoded.uid},
+                // where: {creator: decoded.uid},
                 order: ['name'],
                 limit: pageSize,
                 offset: offset
@@ -102,7 +102,7 @@ class TagsController {
                             attributes: []
                         },
                     }],
-                where: {creator: decoded.uid},
+                // where: {creator: decoded.uid},
                 order: ['name'],
                 order: ['sortOrder'],
                 limit: pageSize,
@@ -121,7 +121,7 @@ class TagsController {
                         attributes: []
                     },
                 }],
-            where: {creator: decoded.uid},
+            // where: {creator: decoded.uid},
             limit: pageSize,
             offset: offset
         })
@@ -130,11 +130,16 @@ class TagsController {
     }
 
     async put(req, res, next) {
-        try
-        {
-            const {id} = req.params
-            const data = req.body
+        const {id} = req.params
+        const data = req.body
 
+        const token = req.headers.authorization.split(' ')[1]
+        const decoded = jwt.verify(token, process.env.SECRET_KEY)
+
+        const tag = await Tag.findOne({where: {id}})
+
+        if(tag.creator === decoded.uid)
+        {
             await Tag.update({name: data.name, sortOrder: data.sortOrder},{where: {id}})
 
             const updated_tag = await Tag.findOne({
@@ -150,17 +155,32 @@ class TagsController {
             })
 
             return res.json(updated_tag)
-        } catch(error) {
-            return next(ApiError.badRequest('This name is not unique'))
+        } else {
+            return next(ApiError.unauthorized('Ошибка доступа'))
         }
+
+        
     }
 
     async delete(req, res, next) {
-        const {id} = req.params
+        try {
+            const {id} = req.params
+            const token = req.headers.authorization.split(' ')[1]
+            const decoded = jwt.verify(token, process.env.SECRET_KEY)
 
-        await Tag.destroy({where: {id}})
+            const tag = await Tag.findOne({where: {id}})
 
-        return res.status(200).json()
+            if(tag.creator === decoded.uid)
+            {
+                await Tag.destroy({where: {id}})
+
+                return res.status(200).json()
+            } else {
+                return next(ApiError.unauthorized('Ошибка доступа'))
+            }
+        } catch (error) {
+            return next(ApiError.badRequest('Такого тега не существует'))
+        }
         
     }
 }
