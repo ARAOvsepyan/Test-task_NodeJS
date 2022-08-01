@@ -6,12 +6,11 @@ class TagsController {
     async post(req, res, next) {
         try {
             const info = req.body
-    
+            
             const token = req.headers.authorization.split(' ')[1]
             const decoded = jwt.verify(token, process.env.SECRET_KEY)
     
-            const tag = await Tag.create({creator: decoded.uid, name: info.name, sortOrder: info.sortOrder})
-            await User_Tag.create({userUid: decoded.uid, tagId: tag.id})
+            const tag = await Tag.create({creatorUid: decoded.uid, name: info.name, sortOrder: info.sortOrder})
 
             return res.json({id: tag.id, name: tag.name, sortOrder: tag.sortOrder})
         } catch (error) {
@@ -20,29 +19,27 @@ class TagsController {
     }
 
     async get_by_id(req, res, next) {
-        // try {
+        try {
             const {id} = req.params
 
             const tag = await Tag.findOne({
-                attributes: ['name', 'sortOrder', 'creator'],
                 include: [{
                     model: User,
-                    attributes: ['nickname', 'uid'],
-                    through: {
-                        attributes: []
-                    },
+                    attributes: ['uid', 'nickname'],
+                    as: 'creator'
                 }],
+                attributes: ['name', 'sortOrder'],
                 where: {id: id}
             })
 
             return res.json(tag)
-        // } catch (error) {
-        //     return next(ApiError.badRequest('Can not find tag'))
-        // }
+        } catch (error) {
+            return next(ApiError.badRequest('Can not find tag'))
+        }
     }
 
     async get(req, res) {
-        const token = req.headers.authorization.split(' ')[1]
+        // const token = req.headers.authorization.split(' ')[1]
         // const decoded = jwt.verify(token, process.env.SECRET_KEY)
 
         const data = req.query
@@ -55,18 +52,17 @@ class TagsController {
         {
             const tags = await Tag.findAndCountAll({ 
                 attributes: ['name', 'sortOrder'],
-                    include: [{
-                        model: User,
-                        attributes: ['nickname', 'uid'],
-                        through: {
-                            attributes: []
-                        },
-                    }],
+                include: [{
+                    model: User,
+                    attributes: ['uid', 'nickname'],
+                    as: 'creator'
+                }],
                 // where: {creator: decoded.uid},
                 order: ['sortOrder'],
                 limit: pageSize,
                 offset: offset
             })
+
 
             return res.json({'data': tags.rows, 'meta': {page, pageSize, 'quantity': tags.count}})
         }
@@ -78,9 +74,6 @@ class TagsController {
                     include: [{
                         model: User,
                         attributes: ['nickname', 'uid'],
-                        through: {
-                            attributes: []
-                        },
                     }],
                 // where: {creator: decoded.uid},
                 order: ['name'],
@@ -138,7 +131,7 @@ class TagsController {
 
         const tag = await Tag.findOne({where: {id}})
 
-        if(tag.creator === decoded.uid)
+        if(tag.creatorUid === decoded.uid)
         {
             await Tag.update({name: data.name, sortOrder: data.sortOrder},{where: {id}})
 
@@ -146,10 +139,8 @@ class TagsController {
                 attributes: ['name', 'sortOrder'],
                 include: [{
                     model: User,
-                    attributes: ['nickname', 'uid'],
-                    through: {
-                        attributes: []
-                    },
+                    attributes: ['uid', 'nickname'],
+                    as: 'creator'
                 }],
                 where: {id: id}
             })
