@@ -10,15 +10,26 @@ const User = sequelize.define('user', {
 
 const Tag = sequelize.define('tag', {
     id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
-    creator: {type: DataTypes.UUID},
+    // creator: {type: DataTypes.UUID},
     name: {type: DataTypes.STRING(40), unique: true, allowNull: false},
     sortOrder: {type: DataTypes.INTEGER, defaultValue: 0}
 })
 
 const User_Tag = sequelize.define('user_tag', {}, {timestamps: false})
 
-User.belongsToMany(Tag, {through: User_Tag})
-Tag.belongsToMany(User, {through: User_Tag})
+User.hasMany(User_Tag)
+User_Tag.belongsTo(User)
 
+Tag.hasMany(User_Tag)
+User_Tag.belongsTo(Tag)
+
+User.hasOne(Tag)
+Tag.belongsTo(User, {
+    foreignKey: {
+        name: 'creatorUid',
+        allowNull: false
+    },
+    as: 'creator'
+})
 
 module.exports = {User, Tag, User_Tag}
