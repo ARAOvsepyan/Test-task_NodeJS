@@ -11,7 +11,7 @@
 
 </div>
 
-## **Back End Code folder structure**
+## **BackEnd Code folder structure**
 
 - models
   - All PG model schemas
